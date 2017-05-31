@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
-using System.Data.Entity;
-using MenuSystemDemo.GeneratedClasses;
+using System.Linq;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.Owin;
 using Microsoft.Owin;

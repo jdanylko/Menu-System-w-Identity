@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
+using System.Security.Principal;
 using System.Web;
 using System.Web.Mvc;
 using MenuDemo.Repository;
@@ -17,27 +19,26 @@ namespace MenuSystemDemo.Controllers
     {
         public ActionResult Index()
         {
-            var menuManager = new MenuManager(new ApplicationDbContext());
-
-            var username = GetUserName();
-
-            var userManager = HttpContext.GetOwinContext().GetUserManager<ApplicationUserManager>();
+            var user = GetUserName();
 
             var model = new MenuViewModel();
 
-            var user = userManager.FindByName(username);
-            if (user != null)
-            {
-                model.MenuItems = menuManager.GetAllByUser(user).ToList();
-            }
+            var userManager = HttpContext.GetOwinContext().GetUserManager<ApplicationUserManager>();
 
+            var appUser = userManager.FindByName(user.Identity.Name);
+            if (appUser != null)
+            {
+                var menuManager = new MenuManager(new ApplicationDbContext());
+                model.MenuItems = menuManager.GetAllByUser(appUser).ToList();
+            }
+            
             return View(model);
         }
 
         [NonAction]
-        private string GetUserName()
+        private IPrincipal GetUserName()
         {
-            return this.ControllerContext.HttpContext.User.Identity.Name;
+            return this.ControllerContext.HttpContext.User;
         }
     }
 }

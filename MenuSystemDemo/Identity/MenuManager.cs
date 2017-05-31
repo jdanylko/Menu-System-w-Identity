@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data.Entity;
@@ -19,33 +20,34 @@ namespace MenuSystemDemo.Identity
             _context = context;
         }
 
-        public ICollection<MenuItem> GetMenuByUser(ApplicationUser user, 
-            System.Func<MenuPermission, bool> filterFunc = null)
+        public ICollection<MenuPermission> GetMenuPermissionsByUser(ApplicationUser user)
         {
             if (user == null)
             {
-                return new Collection<MenuItem>();
+                return new Collection<MenuPermission>();
             }
 
-            // Get Ids.
-            var roleIds = user.Roles.Select(role => role.RoleId).ToList();
+            return _context.Roles
+                .Include(role => role.MenuItems.Select(menu => menu.Permissions))
+                .Where(role => role.Users.Any(tableUser => tableUser.UserId == user.Id))
+                .SelectMany(role => role.MenuItems.SelectMany(roleMenu => roleMenu.Permissions))
+                .ToList();
+        }
 
-            // Enable eager-loading to retrieve our permissions as well.
-            var items = _context.MenuItems
-                .Include(menu => menu.Roles.Select(role => role.Permissions))
-                .Where(e => e.Roles.Any(roleMenu => roleIds.Contains(roleMenu.RoleId)));
 
-            ICollection<MenuItem> records;
-            if (filterFunc == null)
-            {
-                records = items.Where(e => e.Roles.Any(f => f.Permissions.Any())).ToList();
-            }
-            else
-            {
-                records = items.Where(e => e.Roles.Any(f => f.Permissions.Any(filterFunc))).ToList();
-            }
+        public ICollection<MenuItem> GetMenuByUser(ApplicationUser user,
+            Func<MenuPermission, bool> filterFunc = null)
+        {
+            var items = GetMenuPermissionsByUser(user);
 
-            return records;
+            var records = filterFunc == null 
+                ? items.ToList() 
+                : items.Where(filterFunc).ToList();
+
+            return records
+                .GroupBy(menuPermission => menuPermission.RoleMenu.MenuItem)
+                .Select(grouping => grouping.Key)
+                .ToList();
         }
 
         public ICollection<MenuItem> GetAllByUser(ApplicationUser user)
@@ -53,9 +55,7 @@ namespace MenuSystemDemo.Identity
             return GetMenuByUser(user);
         }
 
-
-
-        public ICollection<MenuItem> GetViewableMenuItems(ApplicationUser user)
+        public IEnumerable<MenuItem> GetViewableMenuItems(ApplicationUser user)
         {
             return GetMenuByUser(user, menuPermission => menuPermission.Permission.Name == "View");
         }

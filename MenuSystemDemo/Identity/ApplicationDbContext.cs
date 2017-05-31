@@ -51,8 +51,6 @@ namespace MenuSystemDemo.Identity
                 .HasKey(l => new { l.LoginProvider, l.ProviderKey, l.UserId })
                 .ToTable("AspNetUserLogins");
 
-            modelBuilder.Entity<ApplicationUserClaim>().ToTable("AspNetUserClaims");
-
             var role = modelBuilder.Entity<ApplicationRole>().ToTable("AspNetRoles");
             role.Property(r => r.Name)
                 .IsRequired()

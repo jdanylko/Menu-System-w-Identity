@@ -4,6 +4,7 @@ using System.Linq;
 using System.Web;
 using MenuSystemDemo.GeneratedClasses;
 using Microsoft.AspNet.Identity;
+using WebGrease.Css.Extensions;
 
 namespace MenuSystemDemo.Identity
 {
@@ -59,7 +60,8 @@ namespace MenuSystemDemo.Identity
                 {
                     RoleId = developerRole.Id,
                     MenuId = e.Id
-                });
+                }).ToList();
+
             foreach (var roleMenu in menuItemsInDeveloper)
             {
                 developerRole.MenuItems.Add(roleMenu);
@@ -78,6 +80,7 @@ namespace MenuSystemDemo.Identity
             context.SaveChanges();
 
 
+
             
             // Administrator Role.
             var administratorRole = roleManager.FindByName("Administrator");
@@ -86,7 +89,9 @@ namespace MenuSystemDemo.Identity
                 {
                     RoleId = administratorRole.Id,
                     MenuId = e.Id
-                });
+                })
+                .ToList();
+
             foreach (var roleMenu in menuItemsInAdministrator)
             {
                 administratorRole.MenuItems.Add(roleMenu);
@@ -99,6 +104,42 @@ namespace MenuSystemDemo.Identity
                 }
             }
             context.SaveChanges();
+
+
+            // Let's get our updated Ids
+            var menuManager = new MenuManager(context);
+
+            // DevPerms - No, it's not a new developer hairstyle. :-p
+            var devPerms = menuManager.GetMenuPermissionsByUser(devUser);
+
+            // Add our claims to each role.
+
+            // Developer
+            foreach (var menuPermission in devPerms)
+            {
+                devUser.Claims.Add(new ApplicationUserClaim
+                {
+                    UserId = devUser.Id,
+                    ClaimType = menuPermission.RoleMenu.MenuId.ToString(),
+                    ClaimValue = menuPermission.Permission.Name
+                });
+            }
+            context.SaveChanges();
+
+            // Administrator
+            var adminPerms = menuManager.GetMenuPermissionsByUser(adminUser);
+
+            foreach (var menuPermission in adminPerms)
+            {
+                adminUser.Claims.Add(new ApplicationUserClaim
+                {
+                    UserId = adminUser.Id,
+                    ClaimType = menuPermission.RoleMenu.MenuId.ToString(),
+                    ClaimValue = menuPermission.Permission.Name
+                });
+            }
+            context.SaveChanges();
+
         }
 
         private static ApplicationUser CreateAdministrator(ApplicationDbContext db, ApplicationUserManager userManager)
